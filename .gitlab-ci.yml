@@ -1,0 +1,78 @@
+stages:
+  - build
+  - run
+
+variables:
+  BASE_URL:
+    description: "Base URL of the target environment"
+    value: "qa.gaming-ent.com"
+  DURATION:
+    description: "Pipeline duration in minutes"
+    value: "5"
+  BET_WORKERS:
+    description: "Number of workers for bet scenario"
+    value: "5"
+  NUM_BETS:
+    description: "Number of bets per user"
+    value: "20"
+  REGISTRATION_WORKERS:
+    description: "Number of workers for registration scenario"
+    value: "10"
+  LOGIN_EXPLORING_WORKERS:
+    description: "Number of workers for login_exploring scenario"
+    value: "20"
+  LOGIN_LOGOUT_WORKERS:
+    description: "Number of workers for login_logout scenario"
+    value: "5"
+
+# ------------------------------------------------------------
+# Build Docker image
+# ------------------------------------------------------------
+build_image:
+  stage: build
+  image: gcr.io/kaniko-project/executor:debug
+  tags:
+    - k8s
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  script:
+    - echo "Building Docker image..."
+    - /kaniko/executor --context=$CI_PROJECT_DIR --dockerfile=$CI_PROJECT_DIR/Dockerfile --destination=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --cleanup
+
+# ------------------------------------------------------------
+# Bet scenario
+# ------------------------------------------------------------
+bet_scenario:
+  stage: run
+  image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  tags:
+    - k8s
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  variables:
+    SCENARIO: bet
+  script:
+    - echo "Starting monitoring stack..."
+    - chmod +x scripts/start_monitoring_stack.sh
+    - ./scripts/start_monitoring_stack.sh || echo "Monitoring stack unavailable on this runner"
+    - echo "Starting bet scenario..."
+    - python main.py
+
+# ------------------------------------------------------------
+# Casino scenario (all flows in one job)
+# ------------------------------------------------------------
+casino_scenarios:
+  stage: run
+  image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  tags:
+    - k8s
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  script:
+    - echo "Starting monitoring stack..."
+    - chmod +x scripts/start_monitoring_stack.sh
+    - ./scripts/start_monitoring_stack.sh || echo "Monitoring stack unavailable on this runner"
+    - echo "Starting combined casino scenario (registration + login flows)..."
+    - python main.py
+  after_script:
+    - echo "Cleaning up generated user CSV files..."

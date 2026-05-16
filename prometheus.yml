@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'client-load'
+    static_configs:
+      - targets: ['client-load:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'client-registration'
+    static_configs:
+      - targets: ['client-registration:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'client-login-exploring'
+    static_configs:
+      - targets: ['client-login-exploring:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'client-login-logout'
+    static_configs:
+      - targets: ['client-login-logout:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'host-registration'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    metrics_path: '/metrics'
+
+  - job_name: 'host-login-exploring'
+    static_configs:
+      - targets: ['host.docker.internal:9101']
+    metrics_path: '/metrics'
+
+  - job_name: 'host-login-logout'
+    static_configs:
+      - targets: ['host.docker.internal:9102']
+    metrics_path: '/metrics'
+
+  - job_name: 'host-bet'
+    static_configs:
+      - targets: ['host.docker.internal:9103']
+    metrics_path: '/metrics'
+
+remote_write:
+  - url: https://prometheus-prod-65-prod-eu-west-2.grafana.net/api/prom/push
+    basic_auth:
+      username: "2867617"
+      password_file: /etc/prometheus/secrets/grafana_api_token
